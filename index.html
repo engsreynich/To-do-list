@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task / To-Do List</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 font-sans">
+    <div class="max-w-2xl mx-auto py-12 px-5">
+      <section class="bg-white p-8 rounded-lg shadow-md mb-5">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">
+          ✅ Task / To-Do List
+        </h2>
+
+        <input
+          type="text"
+          placeholder="Task title"
+          id="title"
+          class="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <textarea
+          placeholder="Description (optional)"
+          id="desc"
+          class="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          rows="3"
+        ></textarea>
+        <select
+          id="priority"
+          class="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+
+        <button
+          onclick="save()"
+          id="btn"
+          class="w-full py-3 bg-blue-500 text-white font-bold rounded-md hover:bg-blue-600 transition-colors"
+        >
+          Add Task
+        </button>
+
+        <div class="grid grid-cols-3 gap-3 mt-6">
+          <button
+            class="filter-btn py-2.5 bg-blue-500 text-white border-2 border-blue-500 rounded-md cursor-pointer font-medium hover:bg-blue-600 transition-colors"
+            onclick="filter('all')"
+          >
+            All
+          </button>
+          <button
+            class="filter-btn py-2.5 bg-gray-100 border-2 border-gray-300 rounded-md cursor-pointer font-medium hover:bg-gray-200 transition-colors"
+            onclick="filter('pending')"
+          >
+            Pending
+          </button>
+          <button
+            class="filter-btn py-2.5 bg-gray-100 border-2 border-gray-300 rounded-md cursor-pointer font-medium hover:bg-gray-200 transition-colors"
+            onclick="filter('completed')"
+          >
+            Completed
+          </button>
+        </div>
+      </section>
+
+      <section class="bg-white p-8 rounded-lg shadow-md">
+        <div id="list"></div>
+      </section>
+    </div>
+
+    <script>
+      const createTasks = () => {
+        let tasks = [];
+        let editId = null;
+
+        return {
+          add: (title, desc, priority) =>
+            tasks.push({
+              id: Date.now(),
+              title,
+              desc,
+              priority,
+              completed: false,
+            }),
+          update: (id, title, desc, priority) => {
+            const t = tasks.find((x) => x.id === id);
+            if (t) {
+              t.title = title;
+              t.desc = desc;
+              t.priority = priority;
+            }
+          },
+          delete: (id) => (tasks = tasks.filter((t) => t.id !== id)),
+          toggle: (id) => {
+            const t = tasks.find((x) => x.id === id);
+            if (t) t.completed = !t.completed;
+          },
+          getAll: () => [...tasks],
+          getById: (id) => tasks.find((t) => t.id === id),
+          setEdit: (id) => (editId = id),
+          getEdit: () => editId,
+          filterBy: (fn) => tasks.filter(fn),
+        };
+      };
+
+      const tasks = createTasks();
+      let view = "all";
+
+      const show = () => {
+        const filters = {
+          all: () => tasks.getAll(),
+          pending: () => tasks.filterBy((t) => !t.completed),
+          completed: () => tasks.filterBy((t) => t.completed),
+        };
+
+        const list = [...filters[view]()]
+          .map(
+            (t) => `
+            <div class="p-4 my-3 rounded-lg border-l-4 border-blue-500 bg-blue-50 flex gap-3 ${
+              t.completed ? "opacity-60" : ""
+            }">
+              <input 
+                type="checkbox" 
+                class="w-5 h-5 cursor-pointer mt-1" 
+                ${t.completed ? "checked" : ""} 
+                onchange="toggle(${t.id})" 
+              />
+              <div class="flex-grow">
+                <div class="font-bold text-gray-800 ${
+                  t.completed ? "line-through" : ""
+                }">${t.title}</div>
+                ${
+                  t.desc
+                    ? `<div class="text-sm text-gray-600 mt-1">${t.desc}</div>`
+                    : ""
+                }
+                <div class="text-xs text-gray-400 mt-1">Priority: ${
+                  t.priority
+                }</div>
+              </div>
+              <div class="flex gap-1 items-start">
+                <button 
+                  class="px-3 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600 transition-colors" 
+                  onclick="edit(${t.id})"
+                >
+                  Edit
+                </button>
+                <button 
+                  class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors" 
+                  onclick="del(${t.id})"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          `
+          )
+          .join("");
+
+        document.getElementById("list").innerHTML =
+          list || '<p class="text-center text-gray-400">No tasks</p>';
+      };
+
+      const save = () => {
+        const title = document.getElementById("title").value.trim();
+        const desc = document.getElementById("desc").value.trim();
+        const priority = document.getElementById("priority").value;
+
+        if (!title) return alert("Enter task title");
+
+        const editId = tasks.getEdit();
+        editId
+          ? tasks.update(editId, title, desc, priority)
+          : tasks.add(title, desc, priority);
+
+        tasks.setEdit(null);
+        document.getElementById("btn").textContent = "Add Task";
+        document.getElementById("title").value = "";
+        document.getElementById("desc").value = "";
+        document.getElementById("priority").selectedIndex = 0;
+        show();
+      };
+
+      const edit = (id) => {
+        const t = tasks.getById(id);
+        document.getElementById("title").value = t.title;
+        document.getElementById("desc").value = t.desc;
+        document.getElementById("priority").value = t.priority;
+        tasks.setEdit(id);
+        document.getElementById("btn").textContent = "Update";
+      };
+
+      const del = (id) => {
+        if (confirm("Delete?")) {
+          tasks.delete(id);
+          show();
+        }
+      };
+
+      const toggle = (id) => {
+        tasks.toggle(id);
+        show();
+      };
+
+      const filter = (type) => {
+        view = type;
+        document.querySelectorAll(".filter-btn").forEach((b) => {
+          b.classList.remove("bg-blue-500", "text-white", "border-blue-500");
+          b.classList.add("bg-gray-100", "border-gray-300");
+        });
+        event.target.classList.remove("bg-gray-100", "border-gray-300");
+        event.target.classList.add(
+          "bg-blue-500",
+          "text-white",
+          "border-blue-500"
+        );
+        show();
+      };
+
+      show();
+    </script>
+  </body>
+</html>
